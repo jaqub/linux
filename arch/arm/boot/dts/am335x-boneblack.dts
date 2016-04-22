@@ -64,6 +64,15 @@
 			AM33XX_IOPAD(0x9b0, PIN_OUTPUT_PULLDOWN | MUX_MODE3)	/* xdma_event_intr0 */
 		>;
 	};
+
+  spi1_pins: spi1_pins {
+    pinctrl-single,pins = <
+      AM33XX_IOPAD(0x990, PIN_OUTPUT_PULLUP | MUX_MODE3) /* SCLK */
+      AM33XX_IOPAD(0x994, PIN_INPUT | MUX_MODE3) /* MISO */
+      AM33XX_IOPAD(0x998, PIN_OUTPUT_PULLUP | MUX_MODE3) /* MOSI */
+      AM33XX_IOPAD(0x99C, PIN_OUTPUT_PULLUP | MUX_MODE3) /* CS0 */
+    >;
+  };
 };
 
 &lcdc {
@@ -93,4 +102,15 @@
 
 &rtc {
 	system-power-controller;
+};
+
+&spi1 {
+	status = "okay";
+  pinctrl-names = "default";
+  pinctrl-0 = <&spi1_pins>;
+  mydev@0 {
+    compatible = "testspidev";
+    reg = <0>;
+    spi-max-frequency= <54000000>;
+  };
 };

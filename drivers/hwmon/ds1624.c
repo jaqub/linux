@@ -17,6 +17,24 @@
 /* Supported devices */
 enum devices { ds1624 };
 
+/* The configuration/status register
+ *
+ * - DS1621
+ *    7   6   5   4   3   2   1   0
+ * |Done| X | X | X | X | X | X |1Shot|
+ *
+ * Where:
+ * - 'X' is Reserved
+ */
+
+#define DS1624_REG_CONFIG_1SHOT 0x01
+#define DS1624_REG_CONFIG_DONE
+
+#define DS1624_REG_CONF 0xAC
+#define DS1624_REG_COM_START 0xEE
+#define DS1624_REG_COM_STOP 0x22
+#define DS1624_REG_COM_READ_TEMP 0xAA
+
 struct ds1624_data {
   struct i2c_client *client;
   struct mutex update_mutex;
@@ -28,7 +46,8 @@ static int ds1624_probe(struct i2c_client *client,
 {
   struct ds1624_data *ds1624;
 
-  dev_info(&client->dev, "DS1624 Probe called for device at address: %h\n", client->addr);
+  dev_info(&client->dev, "DS1624 Probe called for device at address: %h\n",
+    client->addr);
 
   ds1624 = devm_kzalloc(&client->dev, sizeof(struct ds1624_data), GFP_KERNEL);
   if (!ds1624) {

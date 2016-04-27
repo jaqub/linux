@@ -52,7 +52,7 @@ static int ds1624_probe(struct i2c_client *client,
   ds1624 = devm_kzalloc(&client->dev, sizeof(struct ds1624_data), GFP_KERNEL);
   if (!ds1624) {
     dev_err($client->dev, "Failed to allocate memory.\n");
-    return _-ENOMEM;
+    return -ENOMEM;
   }
   
   mutex_init(&ds1624->update_mutex);

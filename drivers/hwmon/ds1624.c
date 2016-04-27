@@ -28,7 +28,7 @@ enum devices { ds1624 };
  */
 
 #define DS1624_REG_CONFIG_1SHOT 0x01
-#define DS1624_REG_CONFIG_DONE
+#define DS1624_REG_CONFIG_DONE 0x08
 
 #define DS1624_REG_CONF 0xAC
 #define DS1624_REG_COM_START 0xEE

@@ -391,6 +391,16 @@ config SENSORS_DS1621
 	  This driver can also be built as a module.  If so, the module
 	  will be called ds1621.
 
+config SENSORS_DS1624
+	tristate "Dallas Semiconductor DS1624"
+	depends on I2C
+	help
+	  If you say yes here you get support for Dallas Semiconductor/Maxim
+	  Integrated DS1624 sensor chip
+
+	  This driver can also be built as a module.  If so, the module
+	  will be called ds1624.
+
 config SENSORS_DELL_SMM
 	tristate "Dell laptop SMM BIOS hwmon driver"
 	depends on X86

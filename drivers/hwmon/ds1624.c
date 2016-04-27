@@ -17,10 +17,29 @@
 /* Supported devices */
 enum devices { ds1624 };
 
+struct ds1624_data {
+  struct i2c_client *client;
+  struct mutex update_mutex;
+  u16 temp;
+};
+
 static int ds1624_probe(struct i2c_client *client,
       const struct i2c_device_id *id)
 {
+  struct ds1624_data *ds1624;
+
   dev_info(&client->dev, "DS1624 Probe called for device at address: %h\n", client->addr);
+
+  ds1624 = devm_kzalloc(&client->dev, sizeof(struct ds1624_data), GFP_KERNEL);
+  if (!ds1624) {
+    dev_err($client->dev, "Failed to allocate memory.\n");
+    return _-ENOMEM;
+  }
+  
+  mutex_init(&ds1624->update_mutex);
+
+  ds1624->client = client;
+  i2c_set_clientdata(&client->dev, data);
 
   return 0;
 }

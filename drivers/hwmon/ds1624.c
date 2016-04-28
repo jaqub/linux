@@ -41,23 +41,54 @@ struct ds1624_data {
   u16 temp;
 };
 
+static ssize_t show_temp(struct device *dev, struct device_attribue *da,
+    char *buf)
+{
+  struct ds1624_data *ds1624 = dev_get_drvdata(dev);
+
+  mutex_lock(&ds1624->update_mutex);
+  // Read temperature from device
+  mutex_unlock(&ds1624->update_mutex);
+
+  return sprintf(buf, "%d\n", 10000);
+}
+
+static DEVICE_ATTR(input, S_IRUGO, show_temp, NULL);
+
+static struct attribute *ds1624_attributes[] = {
+  &dev_attr_input,
+  NULL
+};
+
+static const struct attribute_group ds1624_attr_grp = {
+  .attr = ds1624_attributes,
+};
+
 static int ds1624_probe(struct i2c_client *client,
       const struct i2c_device_id *id)
 {
   struct ds1624_data *ds1624;
+  int ret = 0;
 
   dev_info(&client->dev, "DS1624 Probe called for device at address: %h\n",
     client->addr);
 
   ds1624 = devm_kzalloc(&client->dev, sizeof(struct ds1624_data), GFP_KERNEL);
   if (!ds1624) {
-    dev_err($client->dev, "Failed to allocate memory.\n");
+    dev_err(&client->dev, "Failed to allocate memory.\n");
     return -ENOMEM;
   }
-  
+
+  ret = sysfs_create_group(&client->dev.kobj, ds1624_attr_grp);
+  if (!ret) {
+    dev_err(&client->dev, "Failed to create sysfs entries.\n");
+    return err;
+  }
+
   mutex_init(&ds1624->update_mutex);
 
   ds1624->client = client;
+
   i2c_set_clientdata(&client->dev, data);
 
   return 0;

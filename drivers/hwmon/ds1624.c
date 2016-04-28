@@ -13,6 +13,8 @@
 
 #include <linux/module.h>
 #include <linux/i2c.h>
+#include <linux/device.h>
+#include <linux/kernel.h>
 
 /* Supported devices */
 enum devices { ds1624 };
@@ -41,7 +43,7 @@ struct ds1624_data {
   u16 temp;
 };
 
-static ssize_t show_temp(struct device *dev, struct device_attribue *da,
+static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
     char *buf)
 {
   struct ds1624_data *ds1624 = dev_get_drvdata(dev);
@@ -56,12 +58,12 @@ static ssize_t show_temp(struct device *dev, struct device_attribue *da,
 static DEVICE_ATTR(input, S_IRUGO, show_temp, NULL);
 
 static struct attribute *ds1624_attributes[] = {
-  &dev_attr_input,
+  &dev_attr_input.attr,
   NULL
 };
 
 static const struct attribute_group ds1624_attr_grp = {
-  .attr = ds1624_attributes,
+  .attrs = ds1624_attributes,
 };
 
 static int ds1624_probe(struct i2c_client *client,
@@ -70,7 +72,7 @@ static int ds1624_probe(struct i2c_client *client,
   struct ds1624_data *ds1624;
   int ret = 0;
 
-  dev_info(&client->dev, "DS1624 Probe called for device at address: %h\n",
+  dev_info(&client->dev, "DS1624 Probe called for device at address: %d\n",
     client->addr);
 
   ds1624 = devm_kzalloc(&client->dev, sizeof(struct ds1624_data), GFP_KERNEL);
@@ -79,17 +81,17 @@ static int ds1624_probe(struct i2c_client *client,
     return -ENOMEM;
   }
 
-  ret = sysfs_create_group(&client->dev.kobj, ds1624_attr_grp);
+  ret = sysfs_create_group(&client->dev.kobj, &ds1624_attr_grp);
   if (!ret) {
     dev_err(&client->dev, "Failed to create sysfs entries.\n");
-    return err;
+    return ret;
   }
 
   mutex_init(&ds1624->update_mutex);
 
   ds1624->client = client;
 
-  i2c_set_clientdata(&client->dev, data);
+  i2c_set_clientdata(client, ds1624);
 
   return 0;
 }
@@ -109,6 +111,8 @@ static struct i2c_driver ds1624_driver = {
   .probe = ds1624_probe,
   .id_table = ds1624_id,
 };
+
+module_i2c_driver(ds1624_driver);
 
 MODULE_AUTHOR("Jakub Biwel <jakub.biwel@gmail.com>");
 MODULE_DESCRIPTION("DS1624");

@@ -76,7 +76,7 @@ static int ds1624_probe(struct i2c_client *client,
   struct ds1624_data *ds1624;
   int ret = 0;
 
-  dev_info(&client->dev, "DS1624 Probe called for device at address: %d\n",
+  dev_info(&client->dev, "DS1624 Probe called for device at address: 0x%04X\n",
     client->addr);
 
   ds1624 = devm_kzalloc(&client->dev, sizeof(struct ds1624_data), GFP_KERNEL);

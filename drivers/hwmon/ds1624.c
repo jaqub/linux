@@ -15,6 +15,7 @@
 #include <linux/i2c.h>
 #include <linux/device.h>
 #include <linux/kernel.h>
+#include <linux/delay.h>
 
 /* Supported devices */
 enum devices { ds1624 };
@@ -46,17 +47,52 @@ struct ds1624_data {
 static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
     char *buf)
 {
+  int ret;
+  struct i2c_msg msg[2];
   struct ds1624_data *ds1624 = dev_get_drvdata(dev);
+  u8 data;
   if (!ds1624) {
     dev_err(dev, "Driver data not found\n");
     return -EIO;
   }
 
   mutex_lock(&ds1624->update_mutex);
-  // Read temperature from device
+
+  data = DS1624_REG_COM_START;
+  msg[0].addr = ds1624->client->addr;
+  msg[0].flags = 0;
+  msg[0].len = 1;
+  msg[0].buf = &data;
+
+  ret = i2c_transfer(ds1624->client->adapter, msg, 1);
+  if (ret != 1) {
+    dev_err(dev, "Start convert temperature failed\n");
+    mutex_unlock(&ds1624->update_mutex);
+    return -EIO;
+  }
+
+  mdelay(750);
+
+  data = DS1624_REG_COM_READ_TEMP;
+  msg[0].addr = ds1624->client->addr;
+  msg[0].flags = 0;
+  msg[0].len = 1;
+  msg[0].buf = &data;
+
+  msg[1].addr = ds1624->client->addr;
+  msg[1].flags = I2C_M_RD;
+  msg[1].len = 1;
+  msg[1].buf = &data;
+
+  ret = i2c_transfer(ds1624->client->adapter, msg, 2);
   mutex_unlock(&ds1624->update_mutex);
 
-  return sprintf(buf, "%d\n", 10000);
+  if (ret != 2) {
+    dev_err(dev, "Read temperature failed\n");
+    return -EIO;
+  }
+
+  return sprintf(buf, "%d\n", data);
 }
 
 static DEVICE_ATTR(input, S_IRUGO, show_temp, NULL);

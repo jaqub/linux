@@ -50,7 +50,9 @@ static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
   int ret;
   struct i2c_msg msg[2];
   struct ds1624_data *ds1624 = dev_get_drvdata(dev);
-  u8 data;
+  u8 data[2];
+  u16 temp;
+
   if (!ds1624) {
     dev_err(dev, "Driver data not found\n");
     return -EIO;
@@ -58,11 +60,11 @@ static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
 
   mutex_lock(&ds1624->update_mutex);
 
-  data = DS1624_REG_COM_START;
+  data[0] = DS1624_REG_COM_START;
   msg[0].addr = ds1624->client->addr;
   msg[0].flags = 0;
   msg[0].len = 1;
-  msg[0].buf = &data;
+  msg[0].buf = &data[0];
 
   ret = i2c_transfer(ds1624->client->adapter, msg, 1);
   if (ret != 1) {
@@ -71,18 +73,18 @@ static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
     return -EIO;
   }
 
-  mdelay(750);
+  mdelay(200);
 
-  data = DS1624_REG_COM_READ_TEMP;
+  data[0] = DS1624_REG_COM_READ_TEMP;
   msg[0].addr = ds1624->client->addr;
   msg[0].flags = 0;
   msg[0].len = 1;
-  msg[0].buf = &data;
+  msg[0].buf = &data[0];
 
   msg[1].addr = ds1624->client->addr;
   msg[1].flags = I2C_M_RD;
-  msg[1].len = 1;
-  msg[1].buf = &data;
+  msg[1].len = 2;
+  msg[1].buf = (char *)data;
 
   ret = i2c_transfer(ds1624->client->adapter, msg, 2);
   mutex_unlock(&ds1624->update_mutex);
@@ -92,7 +94,10 @@ static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
     return -EIO;
   }
 
-  return sprintf(buf, "%d\n", data);
+  temp = data[0] * 1000;
+  temp += (data[1] >> 5) * 125; 
+
+  return sprintf(buf, "%d\n", temp);
 }
 
 static DEVICE_ATTR(input, S_IRUGO, show_temp, NULL);

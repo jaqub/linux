@@ -91,6 +91,13 @@
 	};
 };
 
+&i2c2 {
+  ds1624@48 {
+    compatible = "ds1624";
+    reg = <0x48>;
+  };
+};
+
 &rtc {
 	system-power-controller;
 };

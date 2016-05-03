@@ -51,7 +51,7 @@ static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
   struct i2c_msg msg[2];
   struct ds1624_data *ds1624 = dev_get_drvdata(dev);
   u8 data[2];
-  u16 temp;
+  s16 temp;
 
   if (!ds1624) {
     dev_err(dev, "Driver data not found\n");
@@ -73,7 +73,7 @@ static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
     return -EIO;
   }
 
-  mdelay(200);
+  //mdelay(200);
 
   data[0] = DS1624_REG_COM_READ_TEMP;
   msg[0].addr = ds1624->client->addr;
@@ -95,15 +95,86 @@ static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
   }
 
   temp = data[0] * 1000;
-  temp += (data[1] >> 5) * 125; 
+  temp += (data[1] >> 4) * 62; 
 
   return sprintf(buf, "%d\n", temp);
 }
 
+static ssize_t show_conf(struct device *dev, struct device_attribute *attr, 
+		char *buf)
+{
+  struct ds1624_data *ds1624 = dev_get_drvdata(dev);
+  struct i2c_msg msg[2];
+  int ret;
+  u8 data;
+
+  mutex_lock(ds1624->update_mutex);
+
+  data = DS1624_REG_CONF;
+  msg[0].addr = ds1624->client->addr;
+  msg[0].flags = 0;
+  msg[0].len = 1;
+  msg[0].buf = &data;
+
+  msg[1].addr = ds1624->client->addr;
+  msg[1].flags = I2C_M_RD;
+  msg[1].len = 1;
+  msg[1].buf = &data;
+
+  ret = i2c_transfer(ds1624->client->adapter, msg, 2);
+  if (ret != 2) {
+    dev_err(dev, "Failed to read config value.\n");
+    mutex_unlock(ds1624->update_mutex);
+    return -EIO;
+  }
+
+  mutex_unlock(ds1624->update_mutex);
+
+  return sprintf(buf, "0x%02X\n", data);
+}
+
+static ssize_t store_conf(struct device *dev, struct device_attribute *attr,
+		 const char *buf, size_t count)
+{
+  struct ds1624_data *ds1624 = dev_get_drvdata(dev);
+  struct i2c_msg msg;
+  u8 data[2];
+  int val;
+  int ret;
+
+  ret = kstrtouint(buf, 16, &val);
+  if (ret)
+    return ret;
+
+  mutex_lock(ds1624->update_mutex);
+
+  data[0] = DS1624_REG_CONF;
+  data[1] = val & 0xFF;
+  dev_dbg(dev, "Will write 0x%02X\n", data[1]);
+
+  msg.addr = ds1624->client->addr;
+  msg.flags = 0;
+  msg.len = 2;
+  msg.buf = data;
+
+  ret = i2c_transfer(ds1624->client->adapter, &msg, 1);
+  if (ret != 1) {
+    dev_err(dev, "Failed to write config\n");
+    mutex_unlock(ds1624->update_mutex);
+    return ret;
+  }
+
+  mutex_unlock(ds1624->update_mutex);
+
+  return count;
+}
+
 static DEVICE_ATTR(input, S_IRUGO, show_temp, NULL);
+static DEVICE_ATTR(config, S_IRUGO | S_IWUSR, show_conf, store_conf);
 
 static struct attribute *ds1624_attributes[] = {
   &dev_attr_input.attr,
+  &dev_attr_config.attr,
   NULL
 };
 

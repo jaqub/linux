@@ -104,41 +104,26 @@ static ssize_t show_conf(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
   struct ds1624_data *ds1624 = dev_get_drvdata(dev);
-  struct i2c_msg msg[2];
-  int ret;
-  u8 data;
+  s32 data;
 
   mutex_lock(&ds1624->update_mutex);
 
-  data = DS1624_REG_CONF;
-  msg[0].addr = ds1624->client->addr;
-  msg[0].flags = 0;
-  msg[0].len = 1;
-  msg[0].buf = &data;
-
-  msg[1].addr = ds1624->client->addr;
-  msg[1].flags = I2C_M_RD;
-  msg[1].len = 1;
-  msg[1].buf = &data;
-
-  ret = i2c_transfer(ds1624->client->adapter, msg, 2);
-  if (ret != 2) {
-    dev_err(dev, "Failed to read config value.\n");
-    mutex_unlock(&ds1624->update_mutex);
+  data = i2c_smbus_read_byte_data(ds1624->client, DS1624_REG_CONF);
+  if (data < 0) {
+    dev_err(dev, "Read config failed\n");
+    mutex_unlock(ds1624->update_mutex);
     return -EIO;
   }
-
+  
   mutex_unlock(&ds1624->update_mutex);
 
-  return sprintf(buf, "0x%02X\n", data);
+  return sprintf(buf, "0x%02X\n", data & 0xFF);
 }
 
 static ssize_t store_conf(struct device *dev, struct device_attribute *attr,
 		 const char *buf, size_t count)
 {
   struct ds1624_data *ds1624 = dev_get_drvdata(dev);
-  struct i2c_msg msg;
-  u8 data[2];
   int val;
   int ret;
 
@@ -148,17 +133,8 @@ static ssize_t store_conf(struct device *dev, struct device_attribute *attr,
 
   mutex_lock(&ds1624->update_mutex);
 
-  data[0] = DS1624_REG_CONF;
-  data[1] = val & 0xFF;
-  dev_dbg(dev, "Will write 0x%02X\n", data[1]);
-
-  msg.addr = ds1624->client->addr;
-  msg.flags = 0;
-  msg.len = 2;
-  msg.buf = data;
-
-  ret = i2c_transfer(ds1624->client->adapter, &msg, 1);
-  if (ret != 1) {
+  ret = i2c_smbus_write_byte_data(ds1624->client, DS1624_REG_CONF, val & 0xFF);
+  if (ret < 0) {
     dev_err(dev, "Failed to write config\n");
     mutex_unlock(&ds1624->update_mutex);
     return ret;

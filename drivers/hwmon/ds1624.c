@@ -111,7 +111,7 @@ static ssize_t show_conf(struct device *dev, struct device_attribute *attr,
   data = i2c_smbus_read_byte_data(ds1624->client, DS1624_REG_CONF);
   if (data < 0) {
     dev_err(dev, "Read config failed\n");
-    mutex_unlock(ds1624->update_mutex);
+    mutex_unlock(&ds1624->update_mutex);
     return -EIO;
   }
   

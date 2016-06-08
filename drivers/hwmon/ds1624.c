@@ -73,8 +73,6 @@ static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
     return -EIO;
   }
 
-  //mdelay(200);
-
   data[0] = DS1624_REG_COM_READ_TEMP;
   msg[0].addr = ds1624->client->addr;
   msg[0].flags = 0;

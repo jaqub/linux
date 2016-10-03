@@ -47,6 +47,10 @@ static ssize_t show_temp(struct device *dev, struct device_attribute *attr,
     char *buf)
 {
   struct ds1624_data *ds1624 = dev_get_drvdata(dev);
+  if (!ds1624) {
+    dev_err(dev, "Driver data not found\n");
+    return -EIO;
+  }
 
   mutex_lock(&ds1624->update_mutex);
   // Read temperature from device
@@ -82,7 +86,7 @@ static int ds1624_probe(struct i2c_client *client,
   }
 
   ret = sysfs_create_group(&client->dev.kobj, &ds1624_attr_grp);
-  if (!ret) {
+  if (ret) {
     dev_err(&client->dev, "Failed to create sysfs entries.\n");
     return ret;
   }
@@ -92,6 +96,13 @@ static int ds1624_probe(struct i2c_client *client,
   ds1624->client = client;
 
   i2c_set_clientdata(client, ds1624);
+
+  return 0;
+}
+
+static int ds1624_remove(struct i2c_client *client)
+{
+  sysfs_remove_group(&client->dev.kobj, &ds1624_attr_grp);
 
   return 0;
 }
@@ -109,6 +120,7 @@ static struct i2c_driver ds1624_driver = {
     .name = "ds1621",
   },
   .probe = ds1624_probe,
+  .remove = ds1624_remove,
   .id_table = ds1624_id,
 };
 

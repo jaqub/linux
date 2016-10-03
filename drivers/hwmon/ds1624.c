@@ -13,6 +13,8 @@
 
 #include <linux/module.h>
 #include <linux/i2c.h>
+#include <linux/hwmon.h>
+#include <linux/hwmon-sysfs.h>
 #include <linux/device.h>
 #include <linux/kernel.h>
 #include <linux/delay.h>
@@ -143,54 +145,45 @@ static ssize_t store_conf(struct device *dev, struct device_attribute *attr,
   return count;
 }
 
-static DEVICE_ATTR(input, S_IRUGO, show_temp, NULL);
+static DEVICE_ATTR(temp1_input, S_IRUGO, show_temp, NULL);
 static DEVICE_ATTR(config, S_IRUGO | S_IWUSR, show_conf, store_conf);
 
 static struct attribute *ds1624_attributes[] = {
-  &dev_attr_input.attr,
+  &dev_attr_temp1_input.attr,
   &dev_attr_config.attr,
   NULL
 };
 
-static const struct attribute_group ds1624_attr_grp = {
+static const struct attribute_group ds1624_group = {
   .attrs = ds1624_attributes,
 };
+
+__ATTRIBUTE_GROUPS(ds1624);
 
 static int ds1624_probe(struct i2c_client *client,
       const struct i2c_device_id *id)
 {
-  struct ds1624_data *ds1624;
-  int ret = 0;
+  struct ds1624_data *data;
+  struct device *hwmon_dev;
 
   dev_info(&client->dev, "DS1624 Probe called for device at address: 0x%04X\n",
     client->addr);
 
-  ds1624 = devm_kzalloc(&client->dev, sizeof(struct ds1624_data), GFP_KERNEL);
-  if (!ds1624) {
+  data = devm_kzalloc(&client->dev, sizeof(struct ds1624_data), GFP_KERNEL);
+  if (!data) {
     dev_err(&client->dev, "Failed to allocate memory.\n");
     return -ENOMEM;
   }
 
-  ret = sysfs_create_group(&client->dev.kobj, &ds1624_attr_grp);
-  if (ret) {
-    dev_err(&client->dev, "Failed to create sysfs entries.\n");
-    return ret;
-  }
+  mutex_init(&data->update_mutex);
 
-  mutex_init(&ds1624->update_mutex);
+  data->client = client;
 
-  ds1624->client = client;
+  hwmon_dev = devm_hwmon_device_register_with_groups(&client->dev,
+                                               client->name, data,
+                                               ds1624_groups);
 
-  i2c_set_clientdata(client, ds1624);
-
-  return 0;
-}
-
-static int ds1624_remove(struct i2c_client *client)
-{
-  sysfs_remove_group(&client->dev.kobj, &ds1624_attr_grp);
-
-  return 0;
+  return PTR_ERR_OR_ZERO(hwmon_dev);
 }
 
 static const struct i2c_device_id ds1624_id[] = {
@@ -206,7 +199,6 @@ static struct i2c_driver ds1624_driver = {
     .name = "ds1621",
   },
   .probe = ds1624_probe,
-  .remove = ds1624_remove,
   .id_table = ds1624_id,
 };
 

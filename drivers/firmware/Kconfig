@@ -206,11 +206,11 @@ config QCOM_SCM_64
 config HAVE_ARM_SMCCC
 	bool
 
-config EXPERIMENTS
-	tristate "Experimental driver for firmware handling"
+config DOCXO_EXPERIMENTS
+	tristate "Experimental driver for docxo firmware handling"
 	default n
 	help
-	 Experimental driver for firmware handling. 
+	 Experimental driver for docxo firmware handling. 
 
 source "drivers/firmware/broadcom/Kconfig"
 source "drivers/firmware/google/Kconfig"

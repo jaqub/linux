@@ -3,16 +3,31 @@
 #include <linux/platform_device.h>
 #include <linux/firmware.h>
 
-struct fwex {
+struct docxo {
 };
 
-static DEFINE_MUTEX(transaction_lock);
+struct docxo_record {
+	u32 id;
+	u32 len;
+	const u8 data[0];
+};
+
+struct docxo_header {
+	u32 magic;
+	struct docxo_record record;
+};
 
 static int firmware_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct fwex *fw;
+	struct docxo *fw;
 	const struct firmware *docxo_fw;
+	struct docxo_header *hdocxo;
+	struct docxo_record *drecord;
+	int record_len;
+	u32 record_id;
+	u32 data_len;
+	int i = 0;
 	int ret;
 
 	fw = devm_kzalloc(dev, sizeof(*fw), GFP_KERNEL);
@@ -22,10 +37,32 @@ static int firmware_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, fw);
 
 	ret = request_firmware(&docxo_fw, "docxo", &pdev->dev);
-	if (ret) {
-  	dev_err(&pdev->dev, "Failed to find firmware\n");  
+	if (ret) 
 		return -ENODEV;
-	}
+
+	hdocxo = (struct docxo_header *)docxo_fw->data;
+	dev_info(&pdev->dev, "File magic: %08X\n", be32_to_cpu(hdocxo->magic));
+
+//  hlen;
+
+	drecord = (struct docxo_record *)&hdocxo->record;
+  record_len = sizeof(struct docxo_record) + be32_to_cpu(drecord->len);
+	record_id = be32_to_cpu(drecord->id);
+	data_len = be32_to_cpu(drecord->len);
+	dev_info(&pdev->dev, "Record id: %08X len: %i data len: %i\n", 
+						record_id, record_len, data_len);
+
+	for (i = 0; i < data_len; i++)
+		dev_info(&pdev->dev, "%02X ", drecord->data[i]);
+
+	dev_info(&pdev->dev, "\n----------------------------\n");
+
+/*
+  hdata+=record_len;
+  hlen-=record_len;
+  while (hlen>0);
+*/
+	release_firmware(docxo_fw);
 
 	dev_info(&pdev->dev, "Firmware experiments loaded\n");
 
@@ -34,7 +71,7 @@ static int firmware_probe(struct platform_device *pdev)
 
 static int firmware_remove(struct platform_device *pdev)
 {
-	struct fwex *fw = platform_get_drvdata(pdev);
+	struct docxo *fw = platform_get_drvdata(pdev);
 
 	dev_info(&pdev->dev, "Firmware experiments module removed\n");
 

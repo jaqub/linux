@@ -17,6 +17,13 @@ struct docxo_header {
 	struct docxo_record record;
 };
 
+static struct docxo_record * docxo_next_record(struct docxo_record * rec) {
+	__u32 len = be32_to_cpu(rec->len);
+	rec = (struct docxo_record *)((__u8 *)rec + len + sizeof(struct docxo_record));
+
+	return be32_to_cpu(rec->len)? rec : NULL;
+}
+
 static int firmware_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -24,10 +31,8 @@ static int firmware_probe(struct platform_device *pdev)
 	const struct firmware *docxo_fw;
 	struct docxo_header *hdocxo;
 	struct docxo_record *drecord;
-	int record_len;
 	u32 record_id;
 	u32 data_len;
-	u8 * record_ptr;
 	int i = 0;
 	int ret;
 
@@ -44,35 +49,22 @@ static int firmware_probe(struct platform_device *pdev)
 	hdocxo = (struct docxo_header *)docxo_fw->data;
 	dev_info(&pdev->dev, "File magic: %08X\n", be32_to_cpu(hdocxo->magic));
 
-//  hlen;
+	for (drecord = &hdocxo->record; drecord != NULL; 
+				drecord = docxo_next_record(drecord)) {
+		record_id = be32_to_cpu(drecord->id);
+		data_len = be32_to_cpu(drecord->len);
+		dev_info(&pdev->dev, "Record id: %08X data len: %i\n",
+						record_id, data_len);
 
-	record_ptr = (u8 *)&hdocxo->record;
-	drecord = &hdocxo->record;
-	record_len = sizeof(struct docxo_record) + be32_to_cpu(drecord->len);
-	record_id = be32_to_cpu(drecord->id);
-	data_len = be32_to_cpu(drecord->len);
-	dev_info(&pdev->dev, "Record id: %08X len: %i data len: %i\n",
-						record_id, record_len, data_len);
+		for (i = 0; i < data_len; i++)
+			dev_info(&pdev->dev, "%02X ", drecord->data[i]);
 
-	for (i = 0; i < data_len; i++)
-		dev_info(&pdev->dev, "%02X ", drecord->data[i]);
-
-	dev_info(&pdev->dev, "----------------------------\n");
-	
-	record_ptr += record_len;
-	drecord = (struct docxo_record *)record_ptr;
-	record_len = sizeof(struct docxo_record) + be32_to_cpu(drecord->len);
-	record_id = be32_to_cpu(drecord->id);
-	data_len = be32_to_cpu(drecord->len);
-	dev_info(&pdev->dev, "Record id: %08X len: %i data len: %i\n",
-						record_id, record_len, data_len);
-	for (i = 0; i < data_len; i++)
-		dev_info(&pdev->dev, "%02X ", drecord->data[i]);
-
-	dev_info(&pdev->dev, "n----------------------------\n");
+		dev_info(&pdev->dev, "----------------------------\n");
+	}
 
 	release_firmware(docxo_fw);	
 	dev_info(&pdev->dev, "Firmware experiments loaded\n");
+
 	return 0;
 }
 

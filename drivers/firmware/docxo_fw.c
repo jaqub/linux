@@ -31,8 +31,6 @@ static int firmware_probe(struct platform_device *pdev)
 	const struct firmware *docxo_fw;
 	struct docxo_header *hdocxo;
 	struct docxo_record *drecord;
-	u32 record_id;
-	u32 data_len;
 	int i = 0;
 	int ret;
 
@@ -51,8 +49,9 @@ static int firmware_probe(struct platform_device *pdev)
 
 	for (drecord = &hdocxo->record; drecord != NULL; 
 				drecord = docxo_next_record(drecord)) {
-		record_id = be32_to_cpu(drecord->id);
-		data_len = be32_to_cpu(drecord->len);
+		__u32 record_id = be32_to_cpu(drecord->id);
+		__u32 data_len = be32_to_cpu(drecord->len);
+
 		dev_info(&pdev->dev, "Record id: %08X data len: %i\n",
 						record_id, data_len);
 

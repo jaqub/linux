@@ -126,4 +126,11 @@ config LEDS_TRIGGER_PANIC
 	  a different trigger.
 	  If unsure, say Y.
 
+config LEDS_TRIGGER_EXPERIMENTAL
+	bool "LED Experimental Trigger"
+	depends on LEDS_TRIGGERS
+	help
+    This is experimental module for test purpose only.
+	  If unsure, say Y.
+
 endif # LEDS_TRIGGERS

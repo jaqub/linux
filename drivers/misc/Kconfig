@@ -92,6 +92,12 @@ config DUMMY_IRQ
 	  The sole purpose of this module is to help with debugging of systems on
 	  which spurious IRQs would happen on disabled IRQ vector.
 
+config EXPERIMENTAL
+  tristate "Experimental platform driver"
+	default n
+	---help---
+    Experimental driver for developnet use - mostly to test.
+
 config IBM_ASM
 	tristate "Device driver for IBM RSA service processor"
 	depends on X86 && PCI && INPUT

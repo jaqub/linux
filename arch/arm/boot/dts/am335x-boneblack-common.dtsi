@@ -116,6 +116,12 @@
 	system-power-controller;
 };
 
+/ {
+ experimental {
+    compatible = "biwel,ex1";
+ };
+};
+
 &mcasp0	{
 	#sound-dai-cells = <0>;
 	pinctrl-names = "default";

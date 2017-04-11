@@ -13,9 +13,12 @@
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/module.h>
+#include <linux/kthread.h>
+#include <linux/delay.h>
 
 #include <linux/of.h>
 
+static struct task_struct *t;
 
 #ifdef CONFIG_OF
 static const struct of_device_id experimental_dt_ids[] = {
@@ -27,9 +30,29 @@ static const struct of_device_id experimental_dt_ids[] = {
 MODULE_DEVICE_TABLE(of, experimental_dt_ids);
 #endif
 
+static int updatefn(void *data) {
+
+  struct platform_device *pdev = (struct platform_device *)data;
+
+  dev_info(&pdev->dev, "Kthread started\n");
+
+  while(!kthread_should_stop()) {
+    msleep(100);  
+  }
+
+  return 0;
+}
+
 static int ex_probe(struct platform_device *pdev)
 {
 	dev_info(&pdev->dev, "Probe for experimental driver called\n");
+
+
+  t = kthread_run(&updatefn, pdev, "fw update");
+  if (IS_ERR(t)) {
+    dev_err(&pdev->dev, "Failed to create task\n");
+    return PTR_ERR(t);
+  }
 
 	return 0;
 }
